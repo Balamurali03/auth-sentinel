@@ -1,0 +1,3 @@
+io.github.balamurali03.auth_sentinel_autoconfigure.config.CosmoSecurityAutoConfiguration
+io.github.balamurali03.auth_sentinel_autoconfigure.config.CosmoPasswordConfiguration
+io.github.balamurali03.auth_sentinel_autoconfigure.config.CosmoMethodSecurityAutoConfiguration
