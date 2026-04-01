@@ -9,41 +9,55 @@ import java.security.Key;
 import java.util.Date;
 import java.util.Map;
 
+/**
+ * Default HS256-based implementation of {@link CosmoTokenService}.
+ *
+ * <p>RS256 support can be added in a future release by extending
+ * {@link #buildSigningKey()} to handle asymmetric keys.
+ */
 public class CosmoTokenServiceImpl implements CosmoTokenService {
 
-    private final String secret;
     private final Long expiration;
     private final String algorithm;
     private final Key signingKey;
 
-    public CosmoTokenServiceImpl(String secret,
-                                  Long expiration,
-                                  String algorithm) {
+    public CosmoTokenServiceImpl(String secret, Long expiration, String algorithm) {
 
         if (secret == null || secret.isBlank()) {
-            throw new CosmoSecurityException("JWT secret must be configured");
+            throw new CosmoSecurityException(
+                    "cosmo.security.jwt.secret must be configured");
         }
-
         if (expiration == null || expiration <= 0) {
-            throw new CosmoSecurityException("JWT expiration must be greater than 0");
+            throw new CosmoSecurityException(
+                    "cosmo.security.jwt.expiration must be a positive number of milliseconds");
         }
 
-        this.secret = secret;
         this.expiration = expiration;
-        this.algorithm = algorithm != null ? algorithm : "HS256";
-        this.signingKey = buildSigningKey();
+        this.algorithm  = (algorithm != null && !algorithm.isBlank()) ? algorithm : "HS256";
+        this.signingKey = buildSigningKey(secret);
     }
 
-    private Key buildSigningKey() {
+    // ── Key construction ────────────────────────────────────────────────────
 
-        if ("HS256".equalsIgnoreCase(algorithm)) {
-            return Keys.hmacShaKeyFor(
-                    secret.getBytes(StandardCharsets.UTF_8)
-            );
+    private Key buildSigningKey(String secret) {
+        if ("HS256".equalsIgnoreCase(algorithm)
+                || "HS384".equalsIgnoreCase(algorithm)
+                || "HS512".equalsIgnoreCase(algorithm)) {
+            return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         }
-
-        throw new CosmoSecurityException("Unsupported algorithm: " + algorithm);
+        throw new CosmoSecurityException("Unsupported JWT algorithm: " + algorithm
+                + ". Supported: HS256, HS384, HS512");
     }
+
+    private SignatureAlgorithm resolveAlgorithm() {
+        return switch (algorithm.toUpperCase()) {
+            case "HS384" -> SignatureAlgorithm.HS384;
+            case "HS512" -> SignatureAlgorithm.HS512;
+            default      -> SignatureAlgorithm.HS256;
+        };
+    }
+
+    // ── CosmoTokenService ───────────────────────────────────────────────────
 
     @Override
     public String generateToken(String subject) {
@@ -61,22 +75,21 @@ public class CosmoTokenServiceImpl implements CosmoTokenService {
                                 Map<String, Object> claims) {
 
         if (subject == null || subject.isBlank()) {
-            throw new CosmoSecurityException("JWT subject is mandatory");
+            throw new CosmoSecurityException("JWT subject must not be blank");
         }
 
-        Date now = new Date();
+        Date now    = new Date();
         Date expiry = new Date(now.getTime() + expiration);
 
         JwtBuilder builder = Jwts.builder()
                 .setSubject(subject)
                 .setIssuedAt(now)
                 .setExpiration(expiry)
-                .signWith(signingKey, SignatureAlgorithm.HS256);
+                .signWith(signingKey, resolveAlgorithm());
 
-        if (issuer != null) {
+        if (issuer != null && !issuer.isBlank()) {
             builder.setIssuer(issuer);
         }
-
         if (claims != null && !claims.isEmpty()) {
             builder.addClaims(claims);
         }
@@ -93,19 +106,17 @@ public class CosmoTokenServiceImpl implements CosmoTokenService {
                     .parseClaimsJws(token);
             return true;
         } catch (JwtException | IllegalArgumentException e) {
-            throw new CosmoSecurityException("Invalid JWT token", e);
+            throw new CosmoSecurityException("Invalid or expired JWT token", e);
         }
     }
 
     @Override
     public String extractSubject(String token) {
-
         Claims claims = Jwts.parserBuilder()
                 .setSigningKey(signingKey)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
-
         return claims.getSubject();
     }
 }

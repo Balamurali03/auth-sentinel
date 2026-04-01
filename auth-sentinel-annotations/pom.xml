@@ -5,35 +5,36 @@
          https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
-
-    <!-- Must inherit from YOUR parent -->
     <parent>
         <groupId>io.github.balamurali03</groupId>
         <artifactId>auth-sentinel-parent</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.0.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>auth-sentinel-annotations</artifactId>
     <packaging>jar</packaging>
-
     <name>AuthSentinel Annotations</name>
     <description>Annotation module for AuthSentinel</description>
 
     <dependencies>
-
-        <!-- Only needed if you use Spring meta-annotations -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-core</artifactId>
         </dependency>
-
-        <!-- Optional if using @Component, etc -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>
         </dependency>
-
+        <!-- FIX: aspectjweaver is required for the AOP aspect in this module -->
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
+        </dependency>
+        <!-- FIX: spring-security-core needed for AccessDeniedException + SecurityContextHolder -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-core</artifactId>
+        </dependency>
     </dependencies>
-
 </project>

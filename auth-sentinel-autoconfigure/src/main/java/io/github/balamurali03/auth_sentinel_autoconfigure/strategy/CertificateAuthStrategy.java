@@ -9,36 +9,39 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import java.security.cert.X509Certificate;
 import java.util.List;
 
+/**
+ * Authenticates requests that present a client-side X.509 certificate.
+ *
+ * <p>The certificate's RFC 2253 Subject DN is used as both the principal
+ * identifier and the username.
+ */
 public class CertificateAuthStrategy implements AuthStrategy {
 
-    private static final String CERT_ATTRIBUTE = "jakarta.servlet.request.X509Certificate";
+    private static final String CERT_ATTR = "jakarta.servlet.request.X509Certificate";
 
     @Override
     public boolean supports(HttpServletRequest request) {
-        return request.getAttribute(CERT_ATTRIBUTE) != null;
+        return request.getAttribute(CERT_ATTR) != null;
     }
 
     @Override
     public Authentication authenticate(HttpServletRequest request) {
 
         X509Certificate[] certs =
-                (X509Certificate[]) request.getAttribute(CERT_ATTRIBUTE);
+                (X509Certificate[]) request.getAttribute(CERT_ATTR);
 
         if (certs == null || certs.length == 0) {
-            throw new IllegalStateException("No X509 certificate found in request");
+            throw new IllegalStateException("No X.509 certificate found in request");
         }
 
-        String subject = certs[0]
-                .getSubjectX500Principal()
-                .getName();   // RFC2253 format
+        String subject = certs[0].getSubjectX500Principal().getName();
 
-        CosmoPrincipal principal =
-                new CosmoPrincipal(
-                        subject,
-                        subject,
-                        "",
-                        List.of(new SimpleGrantedAuthority("ROLE_CERT_USER"))
-                );
+        CosmoPrincipal principal = new CosmoPrincipal(
+                subject,
+                subject,
+                "",
+                List.of(new SimpleGrantedAuthority("ROLE_CERT_USER"))
+        );
 
         return new UsernamePasswordAuthenticationToken(
                 principal,

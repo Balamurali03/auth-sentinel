@@ -1,7 +1,5 @@
 package io.github.balamurali03.auth_sentinel_autoconfigure.config;
 
-import io.github.balamurali03.auth_sentinel_core.service.CosmoTokenService;
-import io.github.balamurali03.auth_sentinel_core.service.CosmoTokenServiceImpl;
 import io.github.balamurali03.auth_sentinel_autoconfigure.filter.CosmoSecurityFilter;
 import io.github.balamurali03.auth_sentinel_autoconfigure.properties.CosmoJwtProperties;
 import io.github.balamurali03.auth_sentinel_autoconfigure.resolver.AuthStrategyResolver;
@@ -9,26 +7,39 @@ import io.github.balamurali03.auth_sentinel_autoconfigure.strategy.AuthStrategy;
 import io.github.balamurali03.auth_sentinel_autoconfigure.strategy.CertificateAuthStrategy;
 import io.github.balamurali03.auth_sentinel_autoconfigure.strategy.GatewayAuthStrategy;
 import io.github.balamurali03.auth_sentinel_autoconfigure.strategy.JwtAuthStrategy;
-
-import java.util.List;
-
+import io.github.balamurali03.auth_sentinel_core.service.CosmoTokenService;
+import io.github.balamurali03.auth_sentinel_core.service.CosmoTokenServiceImpl;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.List;
+
+/**
+ * Auto-configuration that wires together the AuthSentinel security pipeline:
+ *
+ * <ol>
+ *   <li>{@link CosmoTokenService}     – JWT generation and validation</li>
+ *   <li>{@link AuthStrategy} beans    – JWT, Gateway, Certificate</li>
+ *   <li>{@link AuthStrategyResolver}  – picks the right strategy per request</li>
+ *   <li>{@link CosmoSecurityFilter}   – servlet filter that populates the SecurityContext</li>
+ * </ol>
+ *
+ * <p>All beans are guarded with {@code @ConditionalOnMissingBean} so consumer
+ * applications can override any component.
+ */
 @Configuration
 @EnableConfigurationProperties(CosmoJwtProperties.class)
 public class CosmoSecurityAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public CosmoTokenService cosmoTokenService(CosmoJwtProperties properties) {
-
+    public CosmoTokenService cosmoTokenService(CosmoJwtProperties props) {
         return new CosmoTokenServiceImpl(
-                properties.getSecret(),
-                properties.getExpiration(),
-                properties.getAlgorithm()
+                props.getSecret(),
+                props.getExpiration(),
+                props.getAlgorithm()
         );
     }
 

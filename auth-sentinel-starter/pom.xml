@@ -1,38 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
          https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
-
     <parent>
         <groupId>io.github.balamurali03</groupId>
         <artifactId>auth-sentinel-parent</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.0.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>auth-sentinel-starter</artifactId>
     <packaging>jar</packaging>
-
-    <name>auth-sentinel-starter</name>
-    <description>Starter for AuthSentinel</description>
+    <name>AuthSentinel Starter</name>
+    <description>Spring Boot starter for AuthSentinel</description>
 
     <dependencies>
-
-        <!-- Auto configure -->
         <dependency>
             <groupId>io.github.balamurali03</groupId>
             <artifactId>auth-sentinel-autoconfigure</artifactId>
         </dependency>
-
-        <!-- Bring Spring Security automatically -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
+        </dependency>
     </dependencies>
-
 </project>

@@ -1,9 +1,14 @@
 package io.github.balamurali03.auth_sentinel_autoconfigure.model;
 
-import java.util.Collection;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 
+import java.util.Collection;
+
+/**
+ * Spring Security {@link org.springframework.security.core.userdetails.UserDetails}
+ * implementation that also carries an application-level user identifier.
+ */
 public class CosmoPrincipal extends User {
 
     private final String userId;
@@ -16,6 +21,7 @@ public class CosmoPrincipal extends User {
         this.userId = userId;
     }
 
+    /** Returns the application-level user identifier (e.g. UUID or database PK). */
     public String getUserId() {
         return userId;
     }
