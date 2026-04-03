@@ -6,11 +6,11 @@ import java.lang.annotation.*;
  * Marks a method or class as requiring authentication.
  *
  * <ul>
- *   <li>{@code roles}            – one or more Spring Security role names (e.g. {@code "ROLE_ADMIN"}).
+ *   <li>{@code roles}              – one or more Spring Security role names (e.g. {@code "ROLE_ADMIN"}).
  *       If empty, any authenticated principal is accepted.</li>
- *   <li>{@code requireBearer}    – enforce that the request carries a Bearer JWT token.</li>
+ *   <li>{@code requireBearer}      – enforce that the request carries a Bearer JWT token.</li>
  *   <li>{@code requireCertificate} – enforce that the request carries an X.509 client certificate.</li>
- *   <li>{@code requirePrincipal} – enforce that a non-anonymous principal is set.</li>
+ *   <li>{@code requirePrincipal}   – enforce that a non-anonymous principal is set.</li>
  * </ul>
  */
 @Target({ElementType.METHOD, ElementType.TYPE})

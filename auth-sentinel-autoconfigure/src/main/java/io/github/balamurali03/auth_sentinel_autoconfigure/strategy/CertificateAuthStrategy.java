@@ -13,7 +13,7 @@ import java.util.List;
  * Authenticates requests that present a client-side X.509 certificate.
  *
  * <p>The certificate's RFC 2253 Subject DN is used as both the principal
- * identifier and the username.
+ * identifier and the username. The granted authority is {@code ROLE_CERT_USER}.
  */
 public class CertificateAuthStrategy implements AuthStrategy {
 

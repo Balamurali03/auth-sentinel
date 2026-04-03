@@ -1,20 +1,68 @@
 # AuthSentinel
 
-Annotation-driven security framework for Spring Boot 3.x.
+[![Build Status](https://github.com/Balamurali03/auth-sentinel/actions/workflows/maven.yml/badge.svg)](https://github.com/Balamurali03/auth-sentinel/actions)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.balamurali03/auth-sentinel-starter.svg)](https://central.sonatype.com/artifact/io.github.balamurali03/auth-sentinel-starter)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.org/projects/jdk/21/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.x-brightgreen.svg)](https://spring.io/projects/spring-boot)
+
+**AuthSentinel** is a plug-and-play, annotation-driven security framework for Spring Boot 3.x. Drop in the starter, add your properties, annotate your controllers — done. No `SecurityFilterChain` beans, no `WebSecurityConfigurerAdapter`, no token-handling boilerplate.
+
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Module Structure](#module-structure)
+- [Quick Start](#quick-start)
+- [Configuration Reference](#configuration-reference)
+- [Annotations](#annotations)
+- [Authentication Strategies](#authentication-strategies)
+- [How It Works](#how-it-works)
+- [Advanced Usage](#advanced-usage)
+- [Customisation](#customisation)
+- [Building from Source](#building-from-source)
+- [Publishing to Maven Central](#publishing-to-maven-central)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
 
 ## Features
 
-| Feature | Description |
+| Feature | Details |
 |---|---|
-| `@PublicEndpoint` | Marks a method/class as open — no auth required |
-| `@SecuredEndpoint` | Requires authentication; optional role enforcement |
-| `@RoleAllowed` | Restricts a method to one or more named roles |
-| JWT (HS256/HS384/HS512) | HMAC-signed token generation and validation |
-| Gateway trust mode | Trust pre-authenticated requests from an API gateway |
-| X.509 certificate auth | Authenticate via client TLS certificates |
-| BCrypt password support | Pre-configured `PasswordEncoder` bean |
+| `@PublicEndpoint` | Bypasses all security checks |
+| `@SecuredEndpoint` | Requires authentication, optional roles, bearer, or certificate enforcement |
+| `@RoleAllowed` | Fine-grained role check on any method |
+| JWT (HS256/384/512) | Token generation, validation, subject & claims extraction |
+| API Gateway trust mode | Pre-auth via `X-Internal-Call` / `X-User-*` headers |
+| X.509 client certificates | Mutual TLS authentication |
+| Strategy pattern | Pluggable, ordered authentication chain per request |
+| BCrypt passwords | Auto-configured `PasswordEncoder` bean |
+| Global error handler | Structured JSON 401 / 403 responses |
+| Spring Boot auto-config | Zero XML, zero `@Configuration` needed in consumer apps |
 
-## Installation
+---
+
+## Module Structure
+
+```
+auth-sentinel/
+├── auth-sentinel-annotations/   # Pure Java annotations + AOP aspect (no Spring Boot dep)
+├── auth-sentinel-core/          # JWT engine, token service, exceptions (no Spring Boot dep)
+├── auth-sentinel-autoconfigure/ # Spring Boot wiring: properties, filter, strategies, handler
+├── auth-sentinel-starter/       # Thin BOM-style starter (what consumers depend on)
+└── pom.xml                      # Parent POM
+```
+
+The **core** and **annotations** modules have **no Spring Boot dependency** — they are plain Spring Framework. This makes them usable in non-Boot environments and keeps the architecture clean.
+
+---
+
+## Quick Start
+
+### 1. Add the starter
 
 ```xml
 <dependency>
@@ -24,96 +72,377 @@ Annotation-driven security framework for Spring Boot 3.x.
 </dependency>
 ```
 
-## Quick Start
-
-### 1. Configure `application.yml`
+### 2. Configure `application.yml`
 
 ```yaml
 cosmo:
   security:
     jwt:
-      secret: "replace-with-a-long-random-secret-at-least-32-chars"
-      expiration: 3600000   # 1 hour in ms
-      algorithm: HS256
-```
-
-### 2. Register the filter (Spring Security config)
-
-```java
-@Configuration
-@EnableWebSecurity
-public class SecurityConfig {
-
-    private final CosmoSecurityFilter cosmoSecurityFilter;
-
-    public SecurityConfig(CosmoSecurityFilter cosmoSecurityFilter) {
-        this.cosmoSecurityFilter = cosmoSecurityFilter;
-    }
-
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-            .csrf(csrf -> csrf.disable())
-            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .addFilterBefore(cosmoSecurityFilter, UsernamePasswordAuthenticationFilter.class)
-            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
-        return http.build();
-    }
-}
+      secret: my-very-long-and-secure-secret-key-32plus-chars
+      expiration: 3600000   # 1 hour in milliseconds
+      algorithm: HS256      # HS256 | HS384 | HS512 (default: HS256)
 ```
 
 ### 3. Annotate your controllers
 
 ```java
 @RestController
-public class ExampleController {
+@RequestMapping("/api")
+public class UserController {
 
-    @PublicEndpoint
     @GetMapping("/health")
+    @PublicEndpoint                         // No token needed
     public String health() {
         return "OK";
     }
 
-    @SecuredEndpoint
     @GetMapping("/profile")
-    public String profile() {
-        return "Hello, " + AuthContext.getAuthentication().getName();
-    }
+    @SecuredEndpoint                        // Any authenticated user
+    public UserDto getProfile() { ... }
 
-    @SecuredEndpoint(roles = "ROLE_ADMIN")
-    @DeleteMapping("/users/{id}")
-    public void deleteUser(@PathVariable Long id) { ... }
+    @DeleteMapping("/admin/users/{id}")
+    @SecuredEndpoint(roles = "ROLE_ADMIN")  // Admins only
+    public void deleteUser(@PathVariable String id) { ... }
 
-    @RoleAllowed({"ROLE_EDITOR", "ROLE_ADMIN"})
-    @PostMapping("/articles")
-    public Article createArticle(@RequestBody Article article) { ... }
+    @PostMapping("/reports")
+    @RoleAllowed({"ROLE_ADMIN", "ROLE_MANAGER"})
+    public Report createReport(@RequestBody ReportRequest req) { ... }
 }
 ```
 
-## Generating a Token
+That is all the configuration you need. AuthSentinel auto-configures everything else.
+
+---
+
+## Configuration Reference
+
+| Property | Required | Default | Description |
+|---|---|---|---|
+| `cosmo.security.jwt.secret` | ✅ | — | HMAC signing secret (≥ 32 chars for HS256) |
+| `cosmo.security.jwt.expiration` | ✅ | — | Token TTL in milliseconds |
+| `cosmo.security.jwt.algorithm` | ❌ | `HS256` | Signature algorithm: `HS256`, `HS384`, `HS512` |
+
+---
+
+## Annotations
+
+### `@PublicEndpoint`
+
+Marks a method or class as publicly accessible. No authentication checks are performed.
 
 ```java
-@Autowired CosmoTokenService tokenService;
+@PublicEndpoint
+@GetMapping("/public/info")
+public Info info() { ... }
 
-String token = tokenService.generateToken("user@example.com");
-// With issuer and custom claims:
-String token = tokenService.generateToken(
-        "user@example.com",
-        "my-service",
-        Map.of("roles", "ROLE_ADMIN")
-);
+@PublicEndpoint          // All methods in this class are public
+@RestController
+public class HealthController { ... }
 ```
 
-## Deploy to Maven Central
+### `@SecuredEndpoint`
+
+Requires the caller to be authenticated. All attributes are optional.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `roles` | `String[]` | `{}` | At least one role must be present. Empty = any authenticated user. |
+| `requireBearer` | `boolean` | `true` | Reject requests without a `Bearer` token. |
+| `requireCertificate` | `boolean` | `false` | Reject requests without a client X.509 certificate. |
+| `requirePrincipal` | `boolean` | `false` | Reject anonymous principals. |
+
+```java
+// Any authenticated user
+@SecuredEndpoint
+public Data getData() { ... }
+
+// Admin or SuperAdmin only
+@SecuredEndpoint(roles = {"ROLE_ADMIN", "ROLE_SUPERADMIN"})
+public void adminAction() { ... }
+
+// Must carry both a Bearer token AND a client certificate
+@SecuredEndpoint(requireBearer = true, requireCertificate = true)
+public SensitiveData getMtlsData() { ... }
+```
+
+### `@RoleAllowed`
+
+A concise, method-level role gate. The caller must be authenticated and hold at least one of the listed roles.
+
+```java
+@RoleAllowed("ROLE_ADMIN")
+public void deleteEverything() { ... }
+
+@RoleAllowed({"ROLE_EDITOR", "ROLE_ADMIN"})
+public void publishContent() { ... }
+```
+
+---
+
+## Authentication Strategies
+
+AuthSentinel uses a **strategy chain**: the first strategy whose `supports()` returns `true` for the incoming request wins.
+
+### JWT Bearer Token (default)
+
+Activated when the request carries `Authorization: Bearer <token>`.
+
+```http
+GET /api/profile HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+### API Gateway Trust Mode
+
+Activated when the request carries the `X-Internal-Call: true` header. Useful in microservice architectures where a gateway performs authentication upstream.
+
+```http
+GET /api/internal/data HTTP/1.1
+X-Internal-Call: true
+X-User-Id: user-42
+X-User-Roles: ROLE_ADMIN,ROLE_USER
+```
+
+> **Security note:** Only enable gateway trust behind a private network. Any caller that can set these headers will be authenticated.
+
+### X.509 Client Certificate
+
+Activated when the servlet container places a certificate chain at the `jakarta.servlet.request.X509Certificate` request attribute (standard mutual TLS setup). The certificate Subject DN becomes both the user ID and username. The granted authority is `ROLE_CERT_USER`.
+
+---
+
+## How It Works
+
+```
+HTTP Request
+    │
+    ▼
+CosmoSecurityFilter (OncePerRequestFilter)
+    │
+    ▼
+AuthStrategyResolver
+    ├── JwtAuthStrategy.supports()?        → JWT flow
+    ├── GatewayAuthStrategy.supports()?    → Gateway flow
+    └── CertificateAuthStrategy.supports() → mTLS flow
+    │
+    ▼
+Authentication stored in SecurityContextHolder
+    │
+    ▼
+Spring DispatcherServlet → Controller method
+    │
+    ▼
+CosmoSecurityAspect (@Around AOP)
+    ├── @PublicEndpoint   → proceed immediately
+    ├── @SecuredEndpoint  → check auth, bearer, cert, roles
+    └── @RoleAllowed      → check auth, check role
+```
+
+---
+
+## Using `CosmoTokenService` Directly
+
+The `CosmoTokenService` bean is available for injection if you need to issue tokens yourself:
+
+```java
+@Service
+public class AuthService {
+
+    private final CosmoTokenService tokenService;
+
+    public AuthService(CosmoTokenService tokenService) {
+        this.tokenService = tokenService;
+    }
+
+    public String login(String username, String password) {
+        // validate credentials ...
+        return tokenService.generateToken(
+                username,
+                "my-service",
+                Map.of("role", "ROLE_USER", "tenantId", "42")
+        );
+    }
+}
+```
+
+### Token API
+
+| Method | Description |
+|---|---|
+| `generateToken(subject)` | Generates a signed JWT with only the subject |
+| `generateToken(subject, issuer)` | Adds an issuer claim |
+| `generateToken(subject, issuer, claims)` | Adds arbitrary extra claims |
+| `validateToken(token)` | Validates signature and expiry; throws `CosmoSecurityException` on failure |
+| `extractSubject(token)` | Returns the `sub` claim |
+
+---
+
+## Microservice Architecture
+
+In a microservice setup:
+
+1. Your **API Gateway** authenticates the incoming request (e.g., validates the JWT).
+2. The gateway forwards the request with `X-Internal-Call: true`, `X-User-Id`, and `X-User-Roles` headers.
+3. Downstream services pick up the `GatewayAuthStrategy` — **no JWT secret needed on internal services**.
+
+```yaml
+# Internal service — no jwt config needed when gateway mode is used exclusively
+# cosmo.security.jwt is still required if you also want JWT support in the service
+cosmo:
+  security:
+    jwt:
+      secret: internal-service-secret
+      expiration: 3600000
+```
+
+---
+
+## Password Encoding
+
+AuthSentinel auto-configures a BCrypt `PasswordEncoder` bean if none exists:
+
+```java
+@Service
+public class UserService {
+
+    private final PasswordEncoder encoder;
+
+    public UserService(PasswordEncoder encoder) {
+        this.encoder = encoder;
+    }
+
+    public void register(String rawPassword) {
+        String hashed = encoder.encode(rawPassword);
+        // persist hashed ...
+    }
+}
+```
+
+---
+
+## Customisation
+
+All beans are guarded with `@ConditionalOnMissingBean`. To override any component, simply declare your own bean:
+
+```java
+@Configuration
+public class MySecurityConfig {
+
+    // Custom token service (e.g., RS256 with asymmetric keys)
+    @Bean
+    public CosmoTokenService cosmoTokenService() {
+        return new MyRs256TokenService();
+    }
+
+    // Custom authentication strategy
+    @Bean
+    public AuthStrategy apiKeyStrategy() {
+        return new ApiKeyAuthStrategy();
+    }
+}
+```
+
+Custom `AuthStrategy` beans are automatically discovered and added to the resolver chain.
+
+---
+
+## Error Responses
+
+AuthSentinel returns structured JSON for authentication and authorisation failures:
+
+```json
+// 401 Unauthorized — invalid/expired token
+{
+  "status": 401,
+  "error": "Unauthorized",
+  "message": "Invalid or expired JWT token",
+  "timestamp": "2024-06-01T12:00:00Z"
+}
+
+// 403 Forbidden — insufficient role
+{
+  "status": 403,
+  "error": "Forbidden",
+  "message": "Access denied — required role not present",
+  "timestamp": "2024-06-01T12:00:00Z"
+}
+```
+
+To customise, declare your own `@RestControllerAdvice` bean — the default handler backs off automatically.
+
+---
+
+## Building from Source
 
 ```bash
-# 1. Set up GPG key and add credentials to ~/.m2/settings.xml
-# 2. Run:
-mvn clean deploy -Prelease
+# Clone
+git clone https://github.com/Balamurali03/auth-sentinel.git
+cd auth-sentinel
+
+# Build and run all tests
+./mvnw clean verify
+
+# Install to local Maven repository
+./mvnw clean install
 ```
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for the full step-by-step guide.
+Requirements: Java 21, Maven 3.9+
+
+---
+
+## Publishing to Maven Central
+
+### Prerequisites
+
+1. A Sonatype Central account at [central.sonatype.com](https://central.sonatype.com)
+2. Your namespace `io.github.balamurali03` verified
+3. A GPG key pair published to a public keyserver
+
+### Set up GitHub Secrets
+
+| Secret | Description |
+|---|---|
+| `GPG_PRIVATE_KEY` | Exported GPG private key (`gpg --armor --export-secret-keys KEY_ID`) |
+| `GPG_PASSPHRASE` | Passphrase for the GPG key |
+| `CENTRAL_USERNAME` | Sonatype Central username (token) |
+| `CENTRAL_PASSWORD` | Sonatype Central password (token) |
+
+### Release
+
+```bash
+# Tag a release — the CI pipeline handles the rest
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The GitHub Actions workflow (`.github/workflows/maven.yml`) will:
+1. Build and test on every push/PR to `main`
+2. On tag push (`v*`): sign artifacts with GPG and publish to Maven Central
+
+### Manual release
+
+```bash
+./mvnw clean deploy -Prelease \
+  -Dgpg.passphrase=YOUR_PASSPHRASE \
+  -Dcentral.username=YOUR_USERNAME \
+  -Dcentral.password=YOUR_PASSWORD
+```
+
+---
+
+## Contributing
+
+Contributions are welcome! Please open an issue first to discuss significant changes.
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/my-feature`)
+3. Commit your changes (`git commit -m 'Add my feature'`)
+4. Push and open a Pull Request
+
+All code must pass `./mvnw clean verify` before merging.
+
+---
 
 ## License
 
-Apache License 2.0 — see [LICENSE](LICENSE).
+Copyright 2024 Balamurali R. Licensed under the [Apache License, Version 2.0](LICENSE).

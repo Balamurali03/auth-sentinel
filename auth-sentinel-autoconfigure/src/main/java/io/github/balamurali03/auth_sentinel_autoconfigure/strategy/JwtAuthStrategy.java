@@ -10,7 +10,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import java.util.List;
 
 /**
- * Authenticates requests that carry a {@code Authorization: Bearer <token>} header.
+ * Authenticates requests that carry an {@code Authorization: Bearer <token>} header.
  */
 public class JwtAuthStrategy implements AuthStrategy {
 
@@ -30,7 +30,7 @@ public class JwtAuthStrategy implements AuthStrategy {
     public Authentication authenticate(HttpServletRequest request) {
 
         String token   = request.getHeader("Authorization").substring(7);
-        tokenService.validateToken(token);          // throws CosmoSecurityException on failure
+        tokenService.validateToken(token);           // throws CosmoSecurityException on failure
         String subject = tokenService.extractSubject(token);
 
         CosmoPrincipal principal = new CosmoPrincipal(

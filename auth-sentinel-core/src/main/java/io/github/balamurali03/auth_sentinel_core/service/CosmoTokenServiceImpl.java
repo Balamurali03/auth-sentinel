@@ -10,10 +10,10 @@ import java.util.Date;
 import java.util.Map;
 
 /**
- * Default HS256-based implementation of {@link CosmoTokenService}.
+ * Default HS256/384/512-based implementation of {@link CosmoTokenService}.
  *
  * <p>RS256 support can be added in a future release by extending
- * {@link #buildSigningKey()} to handle asymmetric keys.
+ * {@link #buildSigningKey(String)} to handle asymmetric keys.
  */
 public class CosmoTokenServiceImpl implements CosmoTokenService {
 

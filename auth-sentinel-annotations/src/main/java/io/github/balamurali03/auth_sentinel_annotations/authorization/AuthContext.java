@@ -20,8 +20,8 @@ public final class AuthContext {
 
     /**
      * Returns {@code true} when a non-anonymous, authenticated principal is present.
-     * <p>
-     * Note: Spring sets an {@link AnonymousAuthenticationToken} for unauthenticated
+     *
+     * <p>Note: Spring sets an {@link AnonymousAuthenticationToken} for unauthenticated
      * requests, so we must explicitly exclude it here.
      */
     public static boolean isAuthenticated() {

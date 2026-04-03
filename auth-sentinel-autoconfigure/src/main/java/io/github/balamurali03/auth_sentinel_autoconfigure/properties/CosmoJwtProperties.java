@@ -31,7 +31,7 @@ public class CosmoJwtProperties {
     @Positive(message = "cosmo.security.jwt.expiration must be positive")
     private Long expiration;
 
-    /** Signature algorithm – HS256, HS384 or HS512. Defaults to HS256. */
+    /** Signature algorithm — HS256, HS384 or HS512. Defaults to HS256. */
     private String algorithm = "HS256";
 
     // ── Getters / Setters ──────────────────────────────────────────────────

@@ -10,9 +10,9 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
  * Auto-configuration that registers the {@link CosmoSecurityAspect} and enables
  * AspectJ auto-proxying.
  *
- * <p>Annotate your Spring Boot application with
- * {@code @EnableAspectJAutoProxy} only if you need to override proxy settings;
- * this class handles it for standard use cases.
+ * <p>Annotate your Spring Boot application with {@code @EnableAspectJAutoProxy}
+ * only if you need to override proxy settings; this class handles it for
+ * standard use cases.
  */
 @Configuration
 @EnableAspectJAutoProxy
