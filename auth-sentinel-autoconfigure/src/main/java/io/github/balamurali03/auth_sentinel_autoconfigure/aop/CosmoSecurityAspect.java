@@ -17,13 +17,18 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 @Order(1)
 public class CosmoSecurityAspect {
 
-    @Around("@within(publicEndpoint) || @annotation(publicEndpoint)")
+    @Around("@annotation(publicEndpoint)")
     public Object handlePublic(ProceedingJoinPoint pjp,
                                PublicEndpoint publicEndpoint) throws Throwable {
         return pjp.proceed();
     }
+    // @Around("@within(publicEndpoint)")
+    // public Object handlePublicClass(ProceedingJoinPoint pjp,
+    //                            PublicEndpoint publicEndpoint) throws Throwable {
+    //     return pjp.proceed();
+    // }
 
-    @Around("@within(securedEndpoint) || @annotation(securedEndpoint)")
+    @Around("@annotation(securedEndpoint)")
     public Object handleSecured(ProceedingJoinPoint pjp,
                                 SecuredEndpoint securedEndpoint) throws Throwable {
 
