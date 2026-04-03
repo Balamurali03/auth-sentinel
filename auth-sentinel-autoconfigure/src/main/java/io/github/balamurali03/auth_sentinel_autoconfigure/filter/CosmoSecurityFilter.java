@@ -43,6 +43,7 @@ public class CosmoSecurityFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         try {
+            SecurityContextHolder.clearContext();
             Authentication auth = resolver.resolve(request);
             if (auth != null) {
                 SecurityContextHolder.getContext().setAuthentication(auth);

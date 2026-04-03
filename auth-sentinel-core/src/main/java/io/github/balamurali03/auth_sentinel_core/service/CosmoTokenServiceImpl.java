@@ -40,6 +40,17 @@ public class CosmoTokenServiceImpl implements CosmoTokenService {
     // ── Key construction ────────────────────────────────────────────────────
 
     private Key buildSigningKey(String secret) {
+
+        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        int actualBits = keyBytes.length * 8;
+        int requiredBits = switch (algorithm.toUpperCase()) {
+        case "HS384" -> 384;
+        case "HS512" -> 512;
+        default -> 256;
+    };
+        if (actualBits < requiredBits) {
+    throw new CosmoSecurityException("Weak JWT secret");
+}
         if ("HS256".equalsIgnoreCase(algorithm)
                 || "HS384".equalsIgnoreCase(algorithm)
                 || "HS512".equalsIgnoreCase(algorithm)) {

@@ -42,4 +42,12 @@ public final class AuthContext {
         return auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals(role));
     }
+
+   /**
+ * Returns the current principal object (e.g. UserDetails, JWT principal, etc.)
+ */
+public static Object getPrincipal() {
+    Authentication auth = getAuthentication();
+    return (auth != null) ? auth.getPrincipal() : null;
+}
 }

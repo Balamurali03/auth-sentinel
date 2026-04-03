@@ -13,6 +13,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import java.util.List;
 
@@ -31,6 +32,12 @@ import java.util.List;
  */
 @Configuration
 @EnableConfigurationProperties(CosmoJwtProperties.class)
+@ConditionalOnProperty(
+    prefix = "cosmo.security",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true
+)
 public class CosmoSecurityAutoConfiguration {
 
     @Bean

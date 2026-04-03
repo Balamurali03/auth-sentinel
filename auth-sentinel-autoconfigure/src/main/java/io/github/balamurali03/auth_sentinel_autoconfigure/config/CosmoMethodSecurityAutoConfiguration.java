@@ -1,10 +1,11 @@
 package io.github.balamurali03.auth_sentinel_autoconfigure.config;
 
-import io.github.balamurali03.auth_sentinel_annotations.aop.CosmoSecurityAspect;
+import io.github.balamurali03.auth_sentinel_autoconfigure.aop.CosmoSecurityAspect;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 /**
  * Auto-configuration that registers the {@link CosmoSecurityAspect} and enables
@@ -16,6 +17,12 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
  */
 @Configuration
 @EnableAspectJAutoProxy
+@ConditionalOnProperty(
+    prefix = "cosmo.security",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true
+)
 public class CosmoMethodSecurityAutoConfiguration {
 
     @Bean

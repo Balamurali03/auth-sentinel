@@ -35,10 +35,10 @@
             <artifactId>spring-security-core</artifactId>
         </dependency>
         <!-- Required by CosmoSecurityAspect to resolve current HTTP request -->
-        <dependency>
+        <!-- <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-web</artifactId>
-        </dependency>
+        </dependency> -->
 
         <!-- Test -->
         <dependency>

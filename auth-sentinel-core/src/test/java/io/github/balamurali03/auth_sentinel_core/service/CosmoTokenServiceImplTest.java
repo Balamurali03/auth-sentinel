@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.*;
 class CosmoTokenServiceImplTest {
 
     // 32+ character secret required for HS256
-    private static final String SECRET     = "super-secret-key-that-is-long-enough-for-hs256";
+    private static final String SECRET     = "aB3dE6gH9kLmN2pQrStUvWxYz1234567890ABCdefGHIJKLmnopQRstuVWXyz12-super-secret-key-that-is-long-enough-for-hs256";
     private static final long   EXPIRATION = 3_600_000L; // 1 hour
 
     private CosmoTokenService tokenService;
