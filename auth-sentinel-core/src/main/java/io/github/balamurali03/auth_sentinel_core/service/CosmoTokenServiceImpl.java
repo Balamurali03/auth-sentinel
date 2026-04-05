@@ -8,6 +8,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 import java.util.Map;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Default HS256/384/512-based implementation of {@link CosmoTokenService}.
@@ -130,4 +133,23 @@ public class CosmoTokenServiceImpl implements CosmoTokenService {
                 .getBody();
         return claims.getSubject();
     }
+
+    @Override
+public List<String> extractRoles(String token) {
+    Claims claims = Jwts.parserBuilder()
+            .setSigningKey(signingKey)
+            .build()
+            .parseClaimsJws(token)
+            .getBody();
+
+    Object rolesObj = claims.get("roles");
+    if (rolesObj == null) {
+        return List.of();
+    }
+
+    return Arrays.stream(rolesObj.toString().split(","))
+            .map(String::trim)
+            .filter(r -> !r.isBlank())
+            .collect(Collectors.toList());
+}
 }

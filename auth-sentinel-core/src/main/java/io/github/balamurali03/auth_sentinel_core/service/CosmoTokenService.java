@@ -1,6 +1,7 @@
 package io.github.balamurali03.auth_sentinel_core.service;
 
 import java.util.Map;
+import java.util.List;
 
 /**
  * Contract for JWT generation and validation.
@@ -34,4 +35,10 @@ public interface CosmoTokenService {
      * Extracts the {@code sub} claim from a valid token.
      */
     String extractSubject(String token);
+
+    /**
+ * Extracts roles from the token's "roles" claim.
+ * Returns an empty list if no roles claim is present.
+ */
+List<String> extractRoles(String token);
 }

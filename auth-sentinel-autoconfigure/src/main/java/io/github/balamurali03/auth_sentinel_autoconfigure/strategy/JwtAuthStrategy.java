@@ -8,6 +8,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Authenticates requests that carry an {@code Authorization: Bearer <token>} header.
@@ -33,11 +34,17 @@ public class JwtAuthStrategy implements AuthStrategy {
         tokenService.validateToken(token);           // throws CosmoSecurityException on failure
         String subject = tokenService.extractSubject(token);
 
+        // Dynamically extract whatever roles the developer put in the token
+    List<SimpleGrantedAuthority> authorities = tokenService.extractRoles(token)
+            .stream()
+            .map(SimpleGrantedAuthority::new)
+            .collect(Collectors.toList());
+
         CosmoPrincipal principal = new CosmoPrincipal(
                 subject,
                 subject,
                 "",
-                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+                authorities
         );
 
         return new UsernamePasswordAuthenticationToken(

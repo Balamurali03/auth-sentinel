@@ -11,6 +11,8 @@ import org.springframework.security.core.Authentication;
 
 import static org.assertj.core.api.Assertions.*;
 
+import java.util.Map;
+
 /**
  * Unit tests for {@link JwtAuthStrategy}.
  */
@@ -50,21 +52,41 @@ class JwtAuthStrategyTest {
         assertThat(strategy.supports(request)).isFalse();
     }
 
-    @Test
-    @DisplayName("authenticate() returns populated Authentication for valid token")
-    void authenticateValid() {
-        String token = tokenService.generateToken("user-42");
+ @Test
+@DisplayName("authenticate() returns populated Authentication for valid token with no roles")
+void authenticateValid() {
+    String token = tokenService.generateToken("user-42");
 
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        request.addHeader("Authorization", "Bearer " + token);
+    MockHttpServletRequest request = new MockHttpServletRequest();
+    request.addHeader("Authorization", "Bearer " + token);
 
-        Authentication auth = strategy.authenticate(request);
+    Authentication auth = strategy.authenticate(request);
 
-        assertThat(auth).isNotNull();
-        assertThat(auth.isAuthenticated()).isTrue();
-        assertThat(auth.getAuthorities())
-                .anyMatch(a -> a.getAuthority().equals("ROLE_USER"));
-    }
+    assertThat(auth).isNotNull();
+    assertThat(auth.isAuthenticated()).isTrue();
+    assertThat(auth.getAuthorities()).isEmpty(); // no roles in token = no authorities
+}
+
+@Test
+@DisplayName("authenticate() returns authorities from token roles claim")
+void authenticateWithRoles() {
+    String token = tokenService.generateToken(
+            "user-42",
+            "my-service",
+            Map.of("roles", "ADMIN,MANAGER")
+    );
+
+    MockHttpServletRequest request = new MockHttpServletRequest();
+    request.addHeader("Authorization", "Bearer " + token);
+
+    Authentication auth = strategy.authenticate(request);
+
+    assertThat(auth).isNotNull();
+    assertThat(auth.isAuthenticated()).isTrue();
+    assertThat(auth.getAuthorities())
+            .extracting(a -> a.getAuthority())
+            .containsExactlyInAnyOrder("ADMIN", "MANAGER");
+}
 
     @Test
     @DisplayName("authenticate() throws CosmoSecurityException for invalid token")

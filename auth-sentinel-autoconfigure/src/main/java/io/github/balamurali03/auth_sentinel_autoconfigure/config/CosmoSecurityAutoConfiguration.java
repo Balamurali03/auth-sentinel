@@ -14,6 +14,9 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 
 import java.util.List;
 
@@ -79,4 +82,12 @@ public class CosmoSecurityAutoConfiguration {
     public CosmoSecurityFilter cosmoSecurityFilter(AuthStrategyResolver resolver) {
         return new CosmoSecurityFilter(resolver);
     }
+
+    @Bean
+@ConditionalOnMissingBean(UserDetailsService.class)
+public UserDetailsService cosmoUserDetailsService() {
+    // Empty - just suppresses Spring Boot's default UserDetailsService
+    // AuthSentinel handles auth via its own filter chain, not UserDetailsService
+    return new InMemoryUserDetailsManager();
+}
 }
