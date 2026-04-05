@@ -17,6 +17,7 @@
 - [Quick Start](#quick-start)
 - [Configuration Reference](#configuration-reference)
 - [Annotations](#annotations)
+- [Role-Based Access](#role-based-access)
 - [Authentication Strategies](#authentication-strategies)
 - [How It Works](#how-it-works)
 - [Advanced Usage](#advanced-usage)
@@ -35,13 +36,14 @@
 | `@PublicEndpoint` | Bypasses all security checks |
 | `@SecuredEndpoint` | Requires authentication, optional roles, bearer, or certificate enforcement |
 | `@RoleAllowed` | Fine-grained role check on any method |
-| JWT (HS256/384/512) | Token generation, validation, subject & claims extraction |
+| JWT (HS256/384/512) | Token generation, validation, subject, claims & roles extraction |
 | API Gateway trust mode | Pre-auth via `X-Internal-Call` / `X-User-*` headers |
 | X.509 client certificates | Mutual TLS authentication |
 | Strategy pattern | Pluggable, ordered authentication chain per request |
 | BCrypt passwords | Auto-configured `PasswordEncoder` bean |
 | Global error handler | Structured JSON 401 / 403 responses |
 | Spring Boot auto-config | Zero XML, zero `@Configuration` needed in consumer apps |
+| Web security toggles | Opt-in form login, HTTP basic, CSRF, logout via `application.yml` |
 
 ---
 
@@ -68,7 +70,7 @@ The **core** and **annotations** modules have **no Spring Boot dependency** — 
 <dependency>
     <groupId>io.github.balamurali03</groupId>
     <artifactId>auth-sentinel-starter</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 </dependency>
 ```
 
@@ -90,22 +92,20 @@ cosmo:
 @RequestMapping("/api")
 public class UserController {
 
-    @GetMapping("/health")
+    @PostMapping("/register")
     @PublicEndpoint                         // No token needed
-    public String health() {
-        return "OK";
-    }
+    public User register(@RequestBody User user) { ... }
 
     @GetMapping("/profile")
     @SecuredEndpoint                        // Any authenticated user
     public UserDto getProfile() { ... }
 
     @DeleteMapping("/admin/users/{id}")
-    @SecuredEndpoint(roles = "ROLE_ADMIN")  // Admins only
+    @SecuredEndpoint(roles = "ADMIN")       // ADMIN role only
     public void deleteUser(@PathVariable String id) { ... }
 
     @PostMapping("/reports")
-    @RoleAllowed({"ROLE_ADMIN", "ROLE_MANAGER"})
+    @RoleAllowed({"ADMIN", "MANAGER"})
     public Report createReport(@RequestBody ReportRequest req) { ... }
 }
 ```
@@ -116,11 +116,38 @@ That is all the configuration you need. AuthSentinel auto-configures everything 
 
 ## Configuration Reference
 
+### JWT Properties
+
 | Property | Required | Default | Description |
 |---|---|---|---|
 | `cosmo.security.jwt.secret` | ✅ | — | HMAC signing secret (≥ 32 chars for HS256) |
 | `cosmo.security.jwt.expiration` | ✅ | — | Token TTL in milliseconds |
 | `cosmo.security.jwt.algorithm` | ❌ | `HS256` | Signature algorithm: `HS256`, `HS384`, `HS512` |
+
+### Web Security Toggles
+
+All Spring web security features are **disabled by default** since AuthSentinel handles authentication via JWT and AOP. You can opt back in for any feature via `application.yml`:
+
+| Property | Required | Default | Description |
+|---|---|---|---|
+| `cosmo.security.web.enable-form-login` | ❌ | `false` | Enable Spring form-based login page |
+| `cosmo.security.web.enable-http-basic` | ❌ | `false` | Enable HTTP Basic authentication |
+| `cosmo.security.web.enable-csrf` | ❌ | `false` | Enable CSRF protection (useful for server-rendered UIs) |
+| `cosmo.security.web.enable-logout` | ❌ | `false` | Enable Spring logout filter |
+
+**Example — enabling form login for a Thymeleaf monolith:**
+
+```yaml
+cosmo:
+  security:
+    jwt:
+      secret: my-secret-key
+      expiration: 3600000
+    web:
+      enable-form-login: true
+      enable-logout: true
+      enable-csrf: true
+```
 
 ---
 
@@ -156,8 +183,8 @@ Requires the caller to be authenticated. All attributes are optional.
 @SecuredEndpoint
 public Data getData() { ... }
 
-// Admin or SuperAdmin only
-@SecuredEndpoint(roles = {"ROLE_ADMIN", "ROLE_SUPERADMIN"})
+// ADMIN or SUPERADMIN only
+@SecuredEndpoint(roles = {"ADMIN", "SUPERADMIN"})
 public void adminAction() { ... }
 
 // Must carry both a Bearer token AND a client certificate
@@ -170,12 +197,48 @@ public SensitiveData getMtlsData() { ... }
 A concise, method-level role gate. The caller must be authenticated and hold at least one of the listed roles.
 
 ```java
-@RoleAllowed("ROLE_ADMIN")
+@RoleAllowed("ADMIN")
 public void deleteEverything() { ... }
 
-@RoleAllowed({"ROLE_EDITOR", "ROLE_ADMIN"})
+@RoleAllowed({"EDITOR", "ADMIN"})
 public void publishContent() { ... }
 ```
+
+---
+
+## Role-Based Access
+
+AuthSentinel extracts roles **dynamically** from the JWT `roles` claim. When generating a token, include a `roles` key with comma-separated role names:
+
+```java
+@Service
+public class AuthService {
+
+    private final CosmoTokenService tokenService;
+
+    public String login(String username, List<String> userRoles) {
+        return tokenService.generateToken(
+                username,
+                "my-service",
+                Map.of("roles", String.join(",", userRoles))  // dynamic from DB
+        );
+    }
+}
+```
+
+Then use those exact role names in your annotations:
+
+```java
+@RoleAllowed("ADMIN")
+public void adminOnly() { ... }
+
+@SecuredEndpoint(roles = {"ADMIN", "MANAGER"})
+public void adminOrManager() { ... }
+```
+
+Role names are **fully custom** — AuthSentinel makes no assumptions. `ADMIN`, `ROLE_ADMIN`, `SUPER_USER`, `EDITOR` — whatever your application defines. The roles in your token claims must match exactly what you put in your annotations.
+
+> **Note:** If a token is generated without a `roles` claim, the authenticated principal will have no granted authorities. `@SecuredEndpoint` (with no roles) will still pass since it only checks authentication, but `@RoleAllowed` and `@SecuredEndpoint(roles = {...})` will return 403.
 
 ---
 
@@ -200,7 +263,7 @@ Activated when the request carries the `X-Internal-Call: true` header. Useful in
 GET /api/internal/data HTTP/1.1
 X-Internal-Call: true
 X-User-Id: user-42
-X-User-Roles: ROLE_ADMIN,ROLE_USER
+X-User-Roles: ADMIN,USER
 ```
 
 > **Security note:** Only enable gateway trust behind a private network. Any caller that can set these headers will be authenticated.
@@ -221,7 +284,7 @@ CosmoSecurityFilter (OncePerRequestFilter)
     │
     ▼
 AuthStrategyResolver
-    ├── JwtAuthStrategy.supports()?        → JWT flow
+    ├── JwtAuthStrategy.supports()?        → JWT flow  (reads roles from token claims)
     ├── GatewayAuthStrategy.supports()?    → Gateway flow
     └── CertificateAuthStrategy.supports() → mTLS flow
     │
@@ -254,12 +317,15 @@ public class AuthService {
         this.tokenService = tokenService;
     }
 
-    public String login(String username, String password) {
+    public String login(String username, List<String> roles) {
         // validate credentials ...
         return tokenService.generateToken(
                 username,
                 "my-service",
-                Map.of("role", "ROLE_USER", "tenantId", "42")
+                Map.of(
+                    "roles", String.join(",", roles),  // e.g. "ADMIN,MANAGER"
+                    "tenantId", "42"
+                )
         );
     }
 }
@@ -271,9 +337,10 @@ public class AuthService {
 |---|---|
 | `generateToken(subject)` | Generates a signed JWT with only the subject |
 | `generateToken(subject, issuer)` | Adds an issuer claim |
-| `generateToken(subject, issuer, claims)` | Adds arbitrary extra claims |
+| `generateToken(subject, issuer, claims)` | Adds arbitrary extra claims including `roles` |
 | `validateToken(token)` | Validates signature and expiry; throws `CosmoSecurityException` on failure |
 | `extractSubject(token)` | Returns the `sub` claim |
+| `extractRoles(token)` | Returns the `roles` claim as a `List<String>`, empty list if not present |
 
 ---
 
@@ -339,6 +406,13 @@ public class MySecurityConfig {
     public AuthStrategy apiKeyStrategy() {
         return new ApiKeyAuthStrategy();
     }
+
+    // Custom SecurityFilterChain — AuthSentinel's chain backs off automatically
+    @Bean
+    public SecurityFilterChain myFilterChain(HttpSecurity http) throws Exception {
+        // your custom config
+        return http.build();
+    }
 }
 ```
 
@@ -363,7 +437,7 @@ AuthSentinel returns structured JSON for authentication and authorisation failur
 {
   "status": 403,
   "error": "Forbidden",
-  "message": "Access denied — required role not present",
+  "message": "Access denied",
   "timestamp": "2024-06-01T12:00:00Z"
 }
 ```
@@ -411,13 +485,13 @@ Requirements: Java 21, Maven 3.9+
 
 ```bash
 # Tag a release — the CI pipeline handles the rest
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.0.1
+git push origin v1.0.1
 ```
 
 The GitHub Actions workflow (`.github/workflows/maven.yml`) will:
 1. Build and test on every push/PR to `main`
-2. On tag push (`v*`): sign artifacts with GPG and publish to Maven Central
+2. On tag push (`v*`): set the version from the tag, sign artifacts with GPG, and publish to Maven Central
 
 ### Manual release
 
@@ -445,4 +519,4 @@ All code must pass `./mvnw clean verify` before merging.
 
 ## License
 
-Copyright 2024 Balamurali R. Licensed under the [Apache License, Version 2.0](LICENSE).
+Copyright 2026 Balamurali R. Licensed under the [Apache License, Version 2.0](LICENSE).
