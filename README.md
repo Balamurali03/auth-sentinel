@@ -70,7 +70,7 @@ The **core** and **annotations** modules have **no Spring Boot dependency** — 
 <dependency>
     <groupId>io.github.balamurali03</groupId>
     <artifactId>auth-sentinel-starter</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.0</version>
 </dependency>
 ```
 
