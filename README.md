@@ -1,4 +1,278 @@
-# AuthSentinel
+# 🛡️ AuthSentinel
+
+[![Build Status](https://github.com/Balamurali03/auth-sentinel/actions/workflows/maven.yml/badge.svg)](https://github.com/Balamurali03/auth-sentinel/actions)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.balamurali03/auth-sentinel-starter.svg)](https://central.sonatype.com/artifact/io.github.balamurali03/auth-sentinel-starter)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.org/projects/jdk/21/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.x-brightgreen.svg)](https://spring.io/projects/spring-boot)
+
+---
+
+## ⚡ What is AuthSentinel?
+
+**AuthSentinel** is a **plug-and-play security framework for Spring Boot** that eliminates boilerplate and lets you secure APIs using **simple annotations**.
+
+> Add dependency → Configure → Annotate → Done ✅
+
+No `SecurityFilterChain`, no complex config, no repeated JWT handling.
+
+---
+
+## 🚀 Why AuthSentinel?
+
+Spring Security is powerful… but:
+
+* ❌ Too much boilerplate
+* ❌ Repeated JWT logic across services
+* ❌ Complex configuration for simple use-cases
+
+**AuthSentinel solves this by:**
+
+* ⚡ Zero-config auto security
+* 🧩 Annotation-driven access control
+* 🔐 Built-in JWT + multi-auth strategies
+* 🔄 Extensible architecture (strategy pattern)
+
+---
+
+## 🔥 Key Features
+
+* 🧩 **Annotation-driven security**
+
+  * `@PublicEndpoint`
+  * `@SecuredEndpoint`
+  * `@RoleAllowed`
+
+* 🔐 **Multiple authentication strategies**
+
+  * JWT (HS256/384/512)
+  * API Gateway Trust Mode
+  * X.509 Client Certificates (mTLS)
+
+* ⚙️ **Auto Configuration**
+
+  * No manual security setup required
+  * Fully Spring Boot integrated
+
+* 🧠 **Strategy Pattern Architecture**
+
+  * Plug-and-play authentication mechanisms
+
+* 🛡️ **Production-ready defaults**
+
+  * BCrypt password encoding
+  * Structured 401 / 403 responses
+  * Secure filter chain
+
+---
+
+## ⚡ Quick Start (30 seconds)
+
+### 1. Add Dependency
+
+```xml
+<dependency>
+    <groupId>io.github.balamurali03</groupId>
+    <artifactId>auth-sentinel-starter</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
+---
+
+### 2. Configure JWT
+
+```yaml
+cosmo:
+  security:
+    jwt:
+      secret: your-secure-secret-key-32-plus-chars
+      expiration: 3600000
+```
+
+---
+
+### 3. Secure APIs with Annotations
+
+```java
+@RestController
+@RequestMapping("/api")
+public class UserController {
+
+    @PublicEndpoint
+    @PostMapping("/register")
+    public User register(@RequestBody User user) { ... }
+
+    @SecuredEndpoint
+    @GetMapping("/profile")
+    public UserDto getProfile() { ... }
+
+    @SecuredEndpoint(roles = "ADMIN")
+    @DeleteMapping("/admin/users/{id}")
+    public void deleteUser(@PathVariable String id) { ... }
+
+    @RoleAllowed({"ADMIN", "MANAGER"})
+    @PostMapping("/reports")
+    public Report createReport(@RequestBody ReportRequest req) { ... }
+}
+```
+
+---
+
+## 🧠 How It Works
+
+```
+Request
+  ↓
+CosmoSecurityFilter
+  ↓
+AuthStrategyResolver
+  ├── JWT Strategy
+  ├── Gateway Strategy
+  └── Certificate Strategy
+  ↓
+SecurityContext
+  ↓
+Controller
+  ↓
+AOP (Annotation Enforcement)
+```
+
+---
+
+## 🏗️ Architecture
+
+```
+auth-sentinel
+├── annotations        → Custom security annotations + AOP
+├── core               → JWT engine, token handling
+├── autoconfigure      → Spring Boot integration
+├── starter            → Consumer dependency
+```
+
+✔ Clean separation
+✔ Framework-agnostic core
+✔ Boot-optimized integration
+
+---
+
+## 🔐 Authentication Strategies
+
+| Strategy     | Description                                  |
+| ------------ | -------------------------------------------- |
+| JWT          | Standard bearer token authentication         |
+| Gateway Mode | Trusted internal headers (`X-Internal-Call`) |
+| X.509        | Mutual TLS authentication                    |
+
+---
+
+## 🎯 Example Use Case
+
+👉 Microservices with API Gateway
+
+* Gateway validates JWT
+* Passes user info via headers
+* Internal services trust gateway
+
+**Result:**
+
+* No JWT duplication
+* No secret sharing
+* Faster services
+
+---
+
+## ⚙️ Customisation
+
+AuthSentinel is **fully extensible**:
+
+```java
+@Bean
+public AuthStrategy apiKeyStrategy() {
+    return new ApiKeyAuthStrategy();
+}
+```
+
+```java
+@Bean
+public CosmoTokenService customTokenService() {
+    return new MyCustomTokenService();
+}
+```
+
+✔ All components are overrideable
+✔ Uses `@ConditionalOnMissingBean`
+
+---
+
+## 🧪 Error Handling
+
+```json
+{
+  "status": 401,
+  "error": "Unauthorized",
+  "message": "Invalid or expired token",
+  "timestamp": "2026-01-01T10:00:00Z"
+}
+```
+
+---
+
+## 📦 Installation
+
+```bash
+git clone https://github.com/Balamurali03/auth-sentinel.git
+cd auth-sentinel
+./mvnw clean install
+```
+
+---
+
+## 🚀 Publishing
+
+Release with:
+
+```bash
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+CI will:
+
+* Build
+* Sign artifacts
+* Publish to Maven Central
+
+---
+
+## 🤝 Contributing
+
+PRs are welcome!
+Open an issue before major changes.
+
+---
+
+## 📜 License
+
+Licensed under Apache 2.0.
+
+---
+
+## 💡 Vision
+
+AuthSentinel aims to become:
+
+> “The easiest way to secure Spring Boot applications without sacrificing flexibility.”
+
+---
+
+## 👨‍💻 Author
+
+**Balamurali R (CosmoCoder)**
+Building developer-first tools 🚀
+
+
+<!-- # AuthSentinel
 
 [![Build Status](https://github.com/Balamurali03/auth-sentinel/actions/workflows/maven.yml/badge.svg)](https://github.com/Balamurali03/auth-sentinel/actions)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.balamurali03/auth-sentinel-starter.svg)](https://central.sonatype.com/artifact/io.github.balamurali03/auth-sentinel-starter)
@@ -519,4 +793,4 @@ All code must pass `./mvnw clean verify` before merging.
 
 ## License
 
-Copyright 2026 Balamurali R. Licensed under the [Apache License, Version 2.0](LICENSE).
+Copyright 2026 Balamurali R. Licensed under the [Apache License, Version 2.0](LICENSE). -->
