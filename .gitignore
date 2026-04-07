@@ -1,8 +1,22 @@
-HELP.md
+# Maven
 target/
-.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+
+# Logs
+*.log
+
+# Env / secrets
+.env
+*.env
+
+# GPG
+*.asc
+
+# OS
+.DS_Store
+Thumbs.db
 
 ### STS ###
 .apt_generated
