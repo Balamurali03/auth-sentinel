@@ -7,18 +7,12 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.github.balamurali03</groupId>
     <artifactId>auth-sentinel-parent</artifactId>
-    <version>1.0.0</version>
+    <version>${revision}</version>
     <packaging>pom</packaging>
     <name>Auth Sentinel</name>
     <description>Annotation-driven security framework for Spring Boot 3.x</description>
     <url>https://github.com/Balamurali03/auth-sentinel</url>
 
-     <distributionManagement>
-        <repository>
-            <id>central</id>
-            <url>https://central.sonatype.com/api/v1/publisher</url>
-        </repository>
-    </distributionManagement>
 
 
     <modules>
