@@ -2,19 +2,20 @@ name: AuthSentinel CI
 
 on:
   push:
-    branches: ["main"]
-    tags: ["v*"]
+    branches: [ "main" ]
+    tags: [ "v*" ]
   pull_request:
-    branches: ["main"]
-
-permissions:
-  contents: read
+    branches: [ "main" ]
 
 jobs:
 
+  # ── Build & Test ─────────────────────────────────────────
   build:
     name: Build & Test
     runs-on: ubuntu-latest
+
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout
@@ -39,8 +40,9 @@ jobs:
         with:
           name: test-reports
           path: |
-            **/target/surefire-reports
-            **/target/failsafe-reports
+            **/target/surefire-reports/*
+            **/target/failsafe-reports/*
+          if-no-files-found: ignore
 
       - name: Upload JARs
         uses: actions/upload-artifact@v4
@@ -48,14 +50,15 @@ jobs:
           name: authsentinel-jars
           path: "**/target/*.jar"
 
+  # ── Publish to Maven Central (tag pushes only) ───────────
   release:
     name: Publish to Maven Central
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
 
-    permissions:
-      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout
@@ -71,9 +74,11 @@ jobs:
       - name: Import GPG key
         run: |
           echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
 
       - name: Configure Maven settings
-        uses: s4u/maven-settings-action@v3
+        uses: s4u/maven-settings-action@v3.0.0
         with:
           servers: |
             [{
@@ -82,12 +87,8 @@ jobs:
               "password": "${{ secrets.CENTRAL_PASSWORD }}"
             }]
 
-      - name: Extract version from tag
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
-
       - name: Deploy to Maven Central
         run: |
-          ./mvnw -B clean deploy \
-            -Prelease \
-            -Drevision=${VERSION} \
-            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+          ./mvnw -B clean deploy -Prelease \
+          -Drevision=${GITHUB_REF_NAME#v} \
+          -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
