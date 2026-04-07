@@ -2,14 +2,16 @@ name: AuthSentinel CI
 
 on:
   push:
-    branches: [ "main" ]
-    tags:      [ "v*" ]
+    branches: ["main"]
+    tags: ["v*"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
+
+permissions:
+  contents: read
 
 jobs:
 
-  # ── Build & Test ──────────────────────────────────────────────────────────
   build:
     name: Build & Test
     runs-on: ubuntu-latest
@@ -46,12 +48,14 @@ jobs:
           name: authsentinel-jars
           path: "**/target/*.jar"
 
-  # ── Publish to Maven Central (tag pushes only) ────────────────────────────
   release:
     name: Publish to Maven Central
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
+
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
@@ -67,11 +71,9 @@ jobs:
       - name: Import GPG key
         run: |
           echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
-        env:
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
 
       - name: Configure Maven settings
-        uses: s4u/maven-settings-action@v3.0.0
+        uses: s4u/maven-settings-action@v3
         with:
           servers: |
             [{
@@ -80,5 +82,12 @@ jobs:
               "password": "${{ secrets.CENTRAL_PASSWORD }}"
             }]
 
+      - name: Extract version from tag
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+
       - name: Deploy to Maven Central
-        run: ./mvnw -B clean deploy -Prelease -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+        run: |
+          ./mvnw -B clean deploy \
+            -Prelease \
+            -Drevision=${VERSION} \
+            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
