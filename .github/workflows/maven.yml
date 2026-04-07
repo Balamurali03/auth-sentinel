@@ -64,32 +64,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK 21
+      - name: Set up JDK 21 + Maven Central auth
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
           cache: maven
+          server-id: central
+          server-username: CENTRAL_USERNAME
+          server-password: CENTRAL_PASSWORD
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: GPG_PASSPHRASE
 
       - name: Make Maven wrapper executable
         run: chmod +x mvnw
 
-      - name: Import GPG key
-        run: |
-          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
-
-      - name: Configure Maven settings
-        uses: s4u/maven-settings-action@v3.0.0
-        with:
-          servers: |
-            [{
-              "id": "central",
-              "username": "${{ secrets.CENTRAL_USERNAME }}",
-              "password": "${{ secrets.CENTRAL_PASSWORD }}"
-            }]
+      # 🔥 No need for manual GPG import anymore
 
       - name: Deploy to Maven Central
         run: |
           ./mvnw -B clean deploy -Prelease \
-          -Drevision=${GITHUB_REF_NAME#v} \
           -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"

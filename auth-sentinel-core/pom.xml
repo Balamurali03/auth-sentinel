@@ -8,7 +8,7 @@
     <parent>
         <groupId>io.github.balamurali03</groupId>
         <artifactId>auth-sentinel-parent</artifactId>
-        <version>${revision}</version>
+        <version>1.0.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -16,6 +16,28 @@
     <packaging>jar</packaging>
     <name>AuthSentinel Core</name>
     <description>Core security engine for AuthSentinel</description>
+    <url>https://github.com/Balamurali03/auth-sentinel</url>
+
+<licenses>
+    <license>
+        <name>Apache License, Version 2.0</name>
+        <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+    </license>
+</licenses>
+
+<developers>
+    <developer>
+        <id>balamurali03</id>
+        <name>Balamurali R</name>
+        <email>balamurali.rengan@gmail.com</email>
+    </developer>
+</developers>
+
+<scm>
+    <connection>scm:git:git://github.com/Balamurali03/auth-sentinel.git</connection>
+    <developerConnection>scm:git:ssh://github.com/Balamurali03/auth-sentinel.git</developerConnection>
+    <url>https://github.com/Balamurali03/auth-sentinel</url>
+</scm>
 
     <dependencies>
         <dependency>
@@ -65,4 +87,40 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-source-plugin</artifactId>
+    <version>3.3.0</version>
+    <executions>
+        <execution>
+            <id>attach-sources</id>
+            <phase>verify</phase>
+            <goals>
+                <goal>jar-no-fork</goal>
+            </goals>
+        </execution>
+    </executions>
+</plugin>
+
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-javadoc-plugin</artifactId>
+    <version>3.6.3</version>
+    <executions>
+        <execution>
+            <id>attach-javadocs</id>
+            <phase>verify</phase>
+            <goals>
+                <goal>jar</goal>
+            </goals>
+        </execution>
+    </executions>
+    <configuration>
+        <doclint>none</doclint>
+    </configuration>
+</plugin>
+        </plugins>
+    </build>
 </project>
